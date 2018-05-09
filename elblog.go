@@ -12,6 +12,7 @@ import (
 
 // Log ...
 type Log struct {
+	Type                             string
 	Time                             time.Time
 	Name                             string
 	From, To                         *net.TCPAddr
@@ -27,6 +28,8 @@ type Log struct {
 	SSLProtocol                      string
 }
 
+const numTokens = 15
+
 // Parse ...
 func Parse(b []byte) (log *Log, err error) {
 	var (
@@ -39,41 +42,27 @@ func Parse(b []byte) (log *Log, err error) {
 
 	data := b[adv:]
 	log = &Log{}
-	for i != 15 {
+	i = 0
+	for i <= numTokens {
 		data = data[adv:]
-		adv, tok, err = scan(data, i == 14)
+		adv, tok, err = scan(data, i == numTokens)
 		if err != nil {
 			return
 		}
 		switch i {
 		case 0:
+			log.Type = string(tok)
+		case 1:
 			if log.Time, err = time.Parse(time.RFC3339Nano, string(tok)); err != nil {
 				return
 			}
-		case 1:
-			log.Name = string(tok)
 		case 2:
-			parts = bytes.Split(tok, []byte(":"))
-			switch len(parts) {
-			case 1:
-				log.From = &net.TCPAddr{
-					IP: net.ParseIP(string(parts[0])),
-				}
-			case 2:
-				ip, err := strconv.ParseInt(string(parts[1]), 10, 32)
-				if err != nil {
-					return nil, err
-				}
-				log.From = &net.TCPAddr{
-					IP:   net.ParseIP(string(parts[0])),
-					Port: int(ip),
-				}
-			}
+			log.Name = string(tok)
 		case 3:
 			parts = bytes.Split(tok, []byte(":"))
 			switch len(parts) {
 			case 1:
-				log.To = &net.TCPAddr{
+				log.From = &net.TCPAddr{
 					IP: net.ParseIP(string(parts[0])),
 				}
 			case 2:
@@ -81,56 +70,73 @@ func Parse(b []byte) (log *Log, err error) {
 				if err != nil {
 					return nil, err
 				}
-				log.To = &net.TCPAddr{
+				log.From = &net.TCPAddr{
 					IP:   net.ParseIP(string(parts[0])),
 					Port: int(ip),
 				}
 			}
 		case 4:
-			dur, err = strconv.ParseFloat(string(tok), 64)
-			if err != nil {
-				return
+			parts = bytes.Split(tok, []byte(":"))
+			switch len(parts) {
+			case 1:
+				log.To = &net.TCPAddr{
+					IP: net.ParseIP(string(parts[0])),
+				}
+			case 2:
+				ip, err := strconv.ParseInt(string(parts[1]), 10, 32)
+				if err != nil {
+					return nil, err
+				}
+				log.To = &net.TCPAddr{
+					IP:   net.ParseIP(string(parts[0])),
+					Port: int(ip),
+				}
 			}
-			log.RequestProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
 		case 5:
 			dur, err = strconv.ParseFloat(string(tok), 64)
 			if err != nil {
 				return
 			}
-			log.BackendProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
+			log.RequestProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
 		case 6:
 			dur, err = strconv.ParseFloat(string(tok), 64)
 			if err != nil {
 				return
 			}
-			log.ResponseProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
+			log.BackendProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
 		case 7:
-			code, err = strconv.ParseInt(string(tok), 10, 32)
+			dur, err = strconv.ParseFloat(string(tok), 64)
 			if err != nil {
 				return
 			}
-			log.ELBStatusCode = int(code)
+			log.ResponseProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
 		case 8:
 			code, err = strconv.ParseInt(string(tok), 10, 32)
 			if err != nil {
 				return
 			}
-			log.BackendStatusCode = int(code)
+			log.ELBStatusCode = int(code)
 		case 9:
+			code, err = strconv.ParseInt(string(tok), 10, 32)
+			if err != nil {
+				return
+			}
+			log.BackendStatusCode = int(code)
+		case 10:
 			if log.ReceivedBytes, err = strconv.ParseInt(string(tok), 10, 32); err != nil {
 				return
 			}
-		case 10:
+		case 11:
 			if log.SentBytes, err = strconv.ParseInt(string(tok), 10, 32); err != nil {
 				return
 			}
-		case 11:
-			log.Request = string(tok)
 		case 12:
-			log.UserAgent = string(tok)
+			log.Request = string(tok)
 		case 13:
-			log.SSLCipher = string(tok)
+			log.UserAgent = string(tok)
 		case 14:
+			log.SSLCipher = string(tok)
+		case 15:
 			log.SSLProtocol = string(tok)
 		}
 		i++

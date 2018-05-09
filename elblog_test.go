@@ -1,9 +1,8 @@
-package elblog_test
+package elblog
 
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -11,39 +10,113 @@ import (
 	"runtime"
 	"testing"
 	"time"
-
-	"github.com/piotrkowalczuk/elblog"
 )
 
-func Example() {
+func TestExample(t *testing.T) {
 	file, err := os.Open("data.log")
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		t.Fatal(err)
 	}
-	dec := elblog.NewDecoder(file)
 
-	if dec.More() {
+	dec := NewDecoder(file)
+	logs := []Log{}
+	for dec.More() {
 		log, err := dec.Decode()
 		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			t.Fatal(err)
 		}
-		fmt.Println(log)
+		logs = append(logs, *log)
 	}
 
-	// Output:
-	// &{2015-05-13 23:39:43.945958 +0000 UTC my-loadbalancer 192.168.131.39:2817 10.0.0.1:80 73µs 1.048ms 57µs 200 200 0 29 GET http://www.example.com:80/ HTTP/1.1 curl/7.38.0 - -}
+	expected := []Log{
+		Log{
+			Type: "http",
+			Time: func() time.Time {
+				t, _ := time.Parse(time.RFC3339, "2015-05-13T23:39:43.945958Z")
+				return t
+			}(),
+			Name: "my-loadbalancer",
+			From: &net.TCPAddr{
+				IP:   net.ParseIP("192.168.131.39"),
+				Port: 2817,
+			},
+			To: &net.TCPAddr{
+				IP:   net.ParseIP("10.0.0.1"),
+				Port: 80,
+			},
+			RequestProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("73µs")
+				return d
+			}(),
+			BackendProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("1.048ms")
+				return d
+			}(),
+			ResponseProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("57µs")
+				return d
+			}(),
+			ELBStatusCode:     http.StatusOK,
+			BackendStatusCode: http.StatusOK,
+			ReceivedBytes:     0,
+			SentBytes:         29,
+			Request:           "GET http://www.example.com:80/ HTTP/1.1",
+			UserAgent:         "curl/7.38.0",
+			SSLCipher:         "-",
+			SSLProtocol:       "-",
+		},
+		Log{
+			Type: "https",
+			Time: func() time.Time {
+				t, _ := time.Parse(time.RFC3339, "2015-05-13T23:39:43.945958Z")
+				return t
+			}(),
+			Name: "my-loadbalancer",
+			From: &net.TCPAddr{
+				IP:   net.ParseIP("192.168.131.39"),
+				Port: 2817,
+			},
+			To: &net.TCPAddr{
+				IP:   net.ParseIP("10.0.0.1"),
+				Port: 80,
+			},
+			RequestProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("0s")
+				return d
+			}(),
+			BackendProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("2ms")
+				return d
+			}(),
+			ResponseProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("0s")
+				return d
+			}(),
+			ELBStatusCode:     http.StatusOK,
+			BackendStatusCode: http.StatusOK,
+			ReceivedBytes:     145,
+			SentBytes:         1396,
+			Request:           "GET https://www.example.com:443/ HTTP/1.1",
+			UserAgent:         "-",
+			SSLCipher:         "ECDHE-RSA-AES128-GCM-SHA256",
+			SSLProtocol:       "TLSv1.2",
+		},
+	}
+
+	if !reflect.DeepEqual(expected, logs) {
+		t.Fatalf("expected:\n	%v but got:\n	%v", expected, logs)
+	}
 }
 
 func TestParse(t *testing.T) {
 	cases := map[string]struct {
 		given    string
-		expected elblog.Log
+		expected Log
 	}{
 		"basic": {
-			given: `2015-05-13T23:39:43.945958Z my-loadbalancer 192.168.131.39:2817 10.0.0.1:80 0.000073 0.001048 0.000057 200 200 0 29 "GET http://www.example.com:80/ HTTP/1.1" "curl/7.38.0" - -`,
-			expected: elblog.Log{
+			given: `http 2015-05-13T23:39:43.945958Z my-loadbalancer 192.168.131.39:2817 10.0.0.1:80 0.000073 0.001048 0.000057 200 200 0 29 "GET http://www.example.com:80/ HTTP/1.1" "curl/7.38.0" - -`,
+			expected: Log{
+				Type: "http",
 				Time: func() time.Time {
 					t, _ := time.Parse(time.RFC3339, "2015-05-13T23:39:43.945958Z")
 					return t
@@ -83,7 +156,7 @@ func TestParse(t *testing.T) {
 
 	for hint, c := range cases {
 		t.Run(hint, func(t *testing.T) {
-			got, err := elblog.Parse([]byte(c.given))
+			got, err := Parse([]byte(c.given))
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())
 			}
@@ -98,8 +171,8 @@ func TestParse(t *testing.T) {
 func TestDecoder_Decode(t *testing.T) {
 	expected := 100
 	buf := buffor(expected)
-	dec := elblog.NewDecoder(buf)
-	got := make([]*elblog.Log, 0, expected)
+	dec := NewDecoder(buf)
+	got := make([]*Log, 0, expected)
 	for dec.More() {
 		log, err := dec.Decode()
 		if err != nil {
@@ -112,12 +185,12 @@ func TestDecoder_Decode(t *testing.T) {
 	}
 }
 
-var benchLog elblog.Log
+var benchLog Log
 
 func BenchmarkParse(b *testing.B) {
-	data := []byte(`2015-05-13T23:39:43.945958Z my-loadbalancer 192.168.131.39:2817 10.0.0.1:80 0.000073 0.001048 0.000057 200 200 0 29 "GET http://www.example.com:80/ HTTP/1.1" "curl/7.38.0" - -`)
+	data := []byte(`http 2015-05-13T23:39:43.945958Z my-loadbalancer 192.168.131.39:2817 10.0.0.1:80 0.000073 0.001048 0.000057 200 200 0 29 "GET http://www.example.com:80/ HTTP/1.1" "curl/7.38.0" - -`)
 	for n := 0; n < b.N; n++ {
-		log, err := elblog.Parse(data)
+		log, err := Parse(data)
 		if err != nil {
 			b.Fatalf("unexpected error: %s", err.Error())
 		}
@@ -128,7 +201,7 @@ func BenchmarkParse(b *testing.B) {
 func buffor(max int) *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
 	for i := 0; i < max; i++ {
-		buf.WriteString(`2015-05-13T23:39:43.945958Z my-loadbalancer 192.168.131.39:2817 10.0.0.1:80 0.000073 0.001048 0.000057 200 200 0 29 "GET http://www.example.com:80/ HTTP/1.1" "curl/7.38.0" - -`)
+		buf.WriteString(`http 2015-05-13T23:39:43.945958Z my-loadbalancer 192.168.131.39:2817 10.0.0.1:80 0.000073 0.001048 0.000057 200 200 0 29 "GET http://www.example.com:80/ HTTP/1.1" "curl/7.38.0" - -`)
 		buf.WriteRune('\n')
 	}
 	return buf
@@ -146,7 +219,7 @@ func BenchmarkParse_NonParallel(b *testing.B) {
 		b.StartTimer()
 
 		if scanner.Scan() {
-			log, err := elblog.Parse(scanner.Bytes())
+			log, err := Parse(scanner.Bytes())
 			if err != nil {
 				b.Fatalf("unexpected error: %s", err.Error())
 			}
@@ -169,13 +242,13 @@ func BenchmarkParse_Parallel(b *testing.B) {
 		scanner.Split(bufio.ScanLines)
 
 		in := make(chan []byte)
-		out := make(chan *elblog.Log)
+		out := make(chan *Log)
 		done := make(chan error, parallelism+1)
 
 		for i := 0; i < parallelism; i++ {
-			go func(in <-chan []byte, out chan<- *elblog.Log, done chan<- error) {
+			go func(in <-chan []byte, out chan<- *Log, done chan<- error) {
 				for b := range in {
-					log, err := elblog.Parse(b)
+					log, err := Parse(b)
 					if err != nil {
 						done <- err
 					}
@@ -185,7 +258,7 @@ func BenchmarkParse_Parallel(b *testing.B) {
 			}(in, out, done)
 		}
 
-		go func(out <-chan *elblog.Log, done chan<- error) {
+		go func(out <-chan *Log, done chan<- error) {
 			for log := range out {
 				benchLog = *log
 			}

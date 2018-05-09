@@ -3,22 +3,22 @@
 [![Build Status](https://travis-ci.org/piotrkowalczuk/elblog.svg?branch=master)](https://travis-ci.org/piotrkowalczuk/elblog)&nbsp;[![codecov](https://codecov.io/gh/piotrkowalczuk/elblog/branch/master/graph/badge.svg)](https://codecov.io/gh/piotrkowalczuk/elblog)
 
 
-Library helps to parse [ELB](http://docs.aws.amazon.com/elasticloadbalancing/latest/classic/access-log-collection.html) logs. 
+Library helps to parse [ELB](http://docs.aws.amazon.com/elasticloadbalancing/latest/classic/access-log-collection.html) logs.
 
-Elastic Load Balancing provides access logs that capture detailed information about requests sent to your load balancer. 
-Each log contains information such as the time the request was received, the client's IP address, latencies, request paths, and server responses. 
+Elastic Load Balancing provides access logs that capture detailed information about requests sent to your load balancer.
+Each log contains information such as the time the request was received, the client's IP address, latencies, request paths, and server responses.
 You can use these access logs to analyze traffic patterns and to troubleshoot issues.
 
-## Example 
+## Example
 
 
 ```golang
-package main 
+package main
 
 import (
 	"os"
 	"fmt"
-	
+
 	"github.com/piotrkowalczuk/elblog"
 )
 
@@ -29,7 +29,7 @@ func main() {
         os.Exit(1)
     }
     dec := elblog.NewDecoder(file)
-    
+
     if dec.More() {
         log, err := dec.Decode()
         if err != nil {
