@@ -12,23 +12,34 @@ import (
 
 // Log ...
 type Log struct {
-	Type                             string
-	Time                             time.Time
-	Name                             string
-	From, To                         *net.TCPAddr
-	RequestProcessingTime            time.Duration
-	BackendProcessingTime            time.Duration
-	ResponseProcessingTime           time.Duration
-	ELBStatusCode, BackendStatusCode int
-	ReceivedBytes                    int64
-	SentBytes                        int64
-	Request                          string
-	UserAgent                        string
-	SSLCipher                        string
-	SSLProtocol                      string
+	Type                   string
+	Time                   time.Time
+	Name                   string
+	From, To               *net.TCPAddr
+	RequestProcessingTime  time.Duration
+	BackendProcessingTime  time.Duration
+	ResponseProcessingTime time.Duration
+	ELBStatusCode          int
+	BackendStatusCode      string
+	ReceivedBytes          int64
+	SentBytes              int64
+	Request                string
+	UserAgent              string
+	SSLCipher              string
+	SSLProtocol            string
+	TargetGroupARN         string
+	TraceID                string
+	DomainName             string
+	ChosenCertARN          string
+	MatchedRulePriority    string
+	RequestCreationTime    string
+	ActionsExecuted        string
+	RedirectURL            string
+	ErrorReason            string
+	OtherFields            string
 }
 
-const numTokens = 15
+const numTokens = 26
 
 // Parse ...
 func Parse(b []byte) (log *Log, err error) {
@@ -43,9 +54,9 @@ func Parse(b []byte) (log *Log, err error) {
 	data := b[adv:]
 	log = &Log{}
 	i = 0
-	for i <= numTokens {
+	for i < numTokens && adv < len(data) {
 		data = data[adv:]
-		adv, tok, err = scan(data, i == numTokens)
+		adv, tok, err = scan(data)
 		if err != nil {
 			return
 		}
@@ -117,11 +128,7 @@ func Parse(b []byte) (log *Log, err error) {
 			}
 			log.ELBStatusCode = int(code)
 		case 9:
-			code, err = strconv.ParseInt(string(tok), 10, 32)
-			if err != nil {
-				return
-			}
-			log.BackendStatusCode = int(code)
+			log.BackendStatusCode = string(tok)
 		case 10:
 			if log.ReceivedBytes, err = strconv.ParseInt(string(tok), 10, 32); err != nil {
 				return
@@ -138,6 +145,29 @@ func Parse(b []byte) (log *Log, err error) {
 			log.SSLCipher = string(tok)
 		case 15:
 			log.SSLProtocol = string(tok)
+		case 16:
+			log.TargetGroupARN = string(tok)
+		case 17:
+			log.TraceID = string(tok)
+		case 18:
+			log.DomainName = string(tok)
+		case 19:
+			log.ChosenCertARN = string(tok)
+		case 20:
+			log.MatchedRulePriority = string(tok)
+		case 21:
+			log.RequestCreationTime = string(tok)
+		case 22:
+			log.ActionsExecuted = string(tok)
+		case 23:
+			log.RedirectURL = string(tok)
+		case 24:
+			log.ErrorReason = string(tok)
+		case 25:
+			// we've scanned one token but we want to put everything remaining into OtherFields
+			// (including the spaces and quotes)
+			log.OtherFields = string(data)
+			adv = len(data)
 		}
 		i++
 	}
@@ -146,7 +176,7 @@ func Parse(b []byte) (log *Log, err error) {
 
 // scan works like bufio.ScanWord (most of the code is taken from there),
 // but treat everything between quotation marks also as a word.
-func scan(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func scan(data []byte) (advance int, token []byte, err error) {
 	// Skip leading spaces.
 	start := 0
 	open := false
@@ -174,8 +204,11 @@ func scan(data []byte, atEOF bool) (advance int, token []byte, err error) {
 			return i + width, data[start:i], nil
 		}
 	}
-	// If we're at EOF, we have a final, non-empty, non-terminated word. Return it.
-	if atEOF && len(data) > start {
+	// We have a final, non-empty, non-terminated word. Return it.
+	if len(data) > start {
+		if trim && !open {
+			return len(data), data[start+1 : len(data)-1], nil
+		}
 		return len(data), data[start:], nil
 	}
 	// Request more data.
