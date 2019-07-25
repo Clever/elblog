@@ -1,10 +1,10 @@
 package schemas
 
 import (
+	"github.com/Clever/elblog"
 	"strconv"
 	"strings"
-
-	"github.com/Clever/elblog"
+	"time"
 )
 
 // ALBLogSchema is a representation of a row in access-logs-alb-global for use with Parquet:
@@ -47,7 +47,7 @@ type ALBLogSchema struct {
 func ELBLogToALBLogSchema(log elblog.Log) ALBLogSchema {
 	return ALBLogSchema{
 		Type:                   log.Type,
-		Time:                   log.Time.String(),
+		Time:                   log.Time.Format(time.RFC3339),
 		ELB:                    log.Name,
 		ClientIP:               log.From.IP.String(),
 		ClientPort:             int32(log.From.Port),
