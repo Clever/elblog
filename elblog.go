@@ -36,10 +36,14 @@ type Log struct {
 	ActionsExecuted        string
 	RedirectURL            string
 	ErrorReason            string
+	TargetPortList         string
+	TargetStatusCodeList   string
+	Classification         string
+	ClassificationReason   string
 	OtherFields            string
 }
 
-const numTokens = 26
+const numTokens = 30
 
 // Parse ...
 func Parse(b []byte) (log *Log, err error) {
@@ -164,6 +168,14 @@ func Parse(b []byte) (log *Log, err error) {
 		case 24:
 			log.ErrorReason = string(tok)
 		case 25:
+			log.TargetPortList = string(tok)
+		case 26:
+			log.TargetStatusCodeList = string(tok)
+		case 27:
+			log.Classification = string(tok)
+		case 28:
+			log.ClassificationReason = string(tok)
+		case 29:
 			// we've scanned one token but we want to put everything remaining into OtherFields
 			// (including the spaces and quotes)
 			log.OtherFields = string(data)

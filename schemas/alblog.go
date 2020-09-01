@@ -41,6 +41,10 @@ type ALBLogSchema struct {
 	ActionsExecuted        string  `parquet:"name=actions_executed, type=UTF8, encoding=PLAIN_DICTIONARY"`
 	RedirectURL            string  `parquet:"name=redirect_url, type=UTF8"`
 	ErrorReason            string  `parquet:"name=error_reason, type=UTF8, encoding=PLAIN_DICTIONARY"`
+	TargetPortList         string  `parquet:"name=target_port_list, type=UTF8"`
+	TargetStatusCodeList   string  `parquet:"name=target_status_code_list, type=UTF8"`
+	Classification         string  `parquet:"name=classification, type=UTF8, encoding=PLAIN_DICTIONARY"`
+	ClassificationReason   string  `parquet:"name=classification_reason, type=UTF8, encoding=PLAIN_DICTIONARY"`
 	OtherFields            string  `parquet:"name=other_fields, type=UTF8"`
 }
 
@@ -76,6 +80,10 @@ func ELBLogToALBLogSchema(log elblog.Log) ALBLogSchema {
 		ActionsExecuted:        log.ActionsExecuted,
 		RedirectURL:            log.RedirectURL,
 		ErrorReason:            log.ErrorReason,
+		TargetPortList:         log.TargetPortList,
+		TargetStatusCodeList:   log.TargetStatusCodeList,
+		Classification:         log.Classification,
+		ClassificationReason:   log.ClassificationReason,
 		OtherFields:            log.OtherFields,
 	}
 }

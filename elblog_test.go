@@ -243,7 +243,108 @@ func TestExample(t *testing.T) {
 			ActionsExecuted:     "authenticate,forward",
 			RedirectURL:         "-",
 			ErrorReason:         "-",
-			OtherFields:         "future-entry-1 \"future-entry-2\" 3 future/entry/4",
+			OtherFields:         "",
+		},
+		// entry from august 2020
+		Log{
+			Type: "https",
+			Time: func() time.Time {
+				t, _ := time.Parse(time.RFC3339, "2018-07-02T22:23:00.186641Z")
+				return t
+			}(),
+			Name: "my-loadbalancer",
+			From: &net.TCPAddr{
+				IP:   net.ParseIP("192.168.131.39"),
+				Port: 2817,
+			},
+			To: &net.TCPAddr{
+				IP:   net.ParseIP("10.0.0.1"),
+				Port: 80,
+			},
+			RequestProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("86ms")
+				return d
+			}(),
+			BackendProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("48ms")
+				return d
+			}(),
+			ResponseProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("37ms")
+				return d
+			}(),
+			ELBStatusCode:        http.StatusOK,
+			BackendStatusCode:    "200",
+			ReceivedBytes:        0,
+			SentBytes:            57,
+			Request:              "GET https://www.example.com:443/ HTTP/1.1",
+			UserAgent:            "curl/7.46.0",
+			SSLCipher:            "ECDHE-RSA-AES128-GCM-SHA256",
+			SSLProtocol:          "TLSv1.2",
+			TargetGroupARN:       "arn:aws:elasticloadbalancing:us-east-2:123456789012:targetgroup/my-targets/73e2d6bc24d8a067",
+			TraceID:              "Root=1-58337281-1d84f3d73c47ec4e58577259",
+			DomainName:           "www.example.com",
+			ChosenCertARN:        "arn:aws:acm:us-east-2:123456789012:certificate/12345678-1234-1234-1234-123456789012",
+			MatchedRulePriority:  "1",
+			RequestCreationTime:  "2018-07-02T22:22:48.364000Z",
+			ActionsExecuted:      "authenticate,forward",
+			RedirectURL:          "-",
+			ErrorReason:          "-",
+			TargetPortList:       "10.0.0.1:80",
+			TargetStatusCodeList: "200",
+			Classification:       "-",
+			ClassificationReason: "-",
+			OtherFields:          "",
+		},
+		Log{
+			Type: "https",
+			Time: func() time.Time {
+				t, _ := time.Parse(time.RFC3339, "2018-07-02T22:23:00.186641Z")
+				return t
+			}(),
+			Name: "my-loadbalancer",
+			From: &net.TCPAddr{
+				IP:   net.ParseIP("192.168.131.39"),
+				Port: 2817,
+			},
+			To: &net.TCPAddr{
+				IP:   net.ParseIP("10.0.0.1"),
+				Port: 80,
+			},
+			RequestProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("86ms")
+				return d
+			}(),
+			BackendProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("48ms")
+				return d
+			}(),
+			ResponseProcessingTime: func() time.Duration {
+				d, _ := time.ParseDuration("37ms")
+				return d
+			}(),
+			ELBStatusCode:        http.StatusOK,
+			BackendStatusCode:    "200",
+			ReceivedBytes:        0,
+			SentBytes:            57,
+			Request:              "GET https://www.example.com:443/ HTTP/1.1",
+			UserAgent:            "curl/7.46.0",
+			SSLCipher:            "ECDHE-RSA-AES128-GCM-SHA256",
+			SSLProtocol:          "TLSv1.2",
+			TargetGroupARN:       "arn:aws:elasticloadbalancing:us-east-2:123456789012:targetgroup/my-targets/73e2d6bc24d8a067",
+			TraceID:              "Root=1-58337281-1d84f3d73c47ec4e58577259",
+			DomainName:           "www.example.com",
+			ChosenCertARN:        "arn:aws:acm:us-east-2:123456789012:certificate/12345678-1234-1234-1234-123456789012",
+			MatchedRulePriority:  "1",
+			RequestCreationTime:  "2018-07-02T22:22:48.364000Z",
+			ActionsExecuted:      "authenticate,forward",
+			RedirectURL:          "-",
+			ErrorReason:          "-",
+			TargetPortList:       "10.0.0.1:80",
+			TargetStatusCodeList: "200",
+			Classification:       "-",
+			ClassificationReason: "-",
+			OtherFields:          "future-entry-1 \"future-entry-2\" 3 future/entry/4",
 		},
 	}
 
