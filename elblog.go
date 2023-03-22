@@ -3,6 +3,7 @@ package elblog
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -51,6 +52,7 @@ func Parse(b []byte) (log *Log, err error) {
 		adv, i int
 		code   int64
 		dur    float64
+		ip     int64
 		tok    []byte
 		parts  [][]byte
 	)
@@ -62,15 +64,13 @@ func Parse(b []byte) (log *Log, err error) {
 		data = data[adv:]
 		adv, tok, err = scan(data)
 		if err != nil {
-			return
+			return nil, fmt.Errorf("unable to scan next token: %v", err)
 		}
 		switch i {
 		case 0:
 			log.Type = string(tok)
 		case 1:
-			if log.Time, err = time.Parse(time.RFC3339Nano, string(tok)); err != nil {
-				return
-			}
+			log.Time, err = time.Parse(time.RFC3339Nano, string(tok))
 		case 2:
 			log.Name = string(tok)
 		case 3:
@@ -81,10 +81,7 @@ func Parse(b []byte) (log *Log, err error) {
 					IP: net.ParseIP(string(parts[0])),
 				}
 			case 2:
-				ip, err := strconv.ParseInt(string(parts[1]), 10, 32)
-				if err != nil {
-					return nil, err
-				}
+				ip, err = strconv.ParseInt(string(parts[1]), 10, 32)
 				log.From = &net.TCPAddr{
 					IP:   net.ParseIP(string(parts[0])),
 					Port: int(ip),
@@ -98,10 +95,7 @@ func Parse(b []byte) (log *Log, err error) {
 					IP: net.ParseIP(string(parts[0])),
 				}
 			case 2:
-				ip, err := strconv.ParseInt(string(parts[1]), 10, 32)
-				if err != nil {
-					return nil, err
-				}
+				ip, err = strconv.ParseInt(string(parts[1]), 10, 32)
 				log.To = &net.TCPAddr{
 					IP:   net.ParseIP(string(parts[0])),
 					Port: int(ip),
@@ -109,38 +103,22 @@ func Parse(b []byte) (log *Log, err error) {
 			}
 		case 5:
 			dur, err = strconv.ParseFloat(string(tok), 64)
-			if err != nil {
-				return
-			}
 			log.RequestProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
 		case 6:
 			dur, err = strconv.ParseFloat(string(tok), 64)
-			if err != nil {
-				return
-			}
 			log.BackendProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
 		case 7:
 			dur, err = strconv.ParseFloat(string(tok), 64)
-			if err != nil {
-				return
-			}
 			log.ResponseProcessingTime = time.Duration(dur * 1000 * 1000 * 1000)
 		case 8:
 			code, err = strconv.ParseInt(string(tok), 10, 32)
-			if err != nil {
-				return
-			}
 			log.ELBStatusCode = int(code)
 		case 9:
 			log.BackendStatusCode = string(tok)
 		case 10:
-			if log.ReceivedBytes, err = strconv.ParseInt(string(tok), 10, 32); err != nil {
-				return
-			}
+			log.ReceivedBytes, err = strconv.ParseInt(string(tok), 10, 32)
 		case 11:
-			if log.SentBytes, err = strconv.ParseInt(string(tok), 10, 32); err != nil {
-				return
-			}
+			log.SentBytes, err = strconv.ParseInt(string(tok), 10, 32)
 		case 12:
 			log.Request = string(tok)
 		case 13:
@@ -180,6 +158,9 @@ func Parse(b []byte) (log *Log, err error) {
 			// (including the spaces and quotes)
 			log.OtherFields = string(data)
 			adv = len(data)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("invalid field %q at index %d: %v", tok, i, err)
 		}
 		i++
 	}
