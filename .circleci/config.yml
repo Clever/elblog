@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: /go/src/github.com/Clever/elblog
     docker:
-    - image: circleci/golang:1.12-stretch
+    - image: circleci/golang:1.16
     steps:
     - checkout
     - run: make test
