@@ -7,7 +7,7 @@ PKGS := $(shell go list ./... | grep -v /vendor)
 
 .PHONY: test $(PKGS) run install_deps
 
-$(eval $(call golang-version-check,1.12))
+$(eval $(call golang-version-check,1.24))
 
 test: $(PKGS)
 
