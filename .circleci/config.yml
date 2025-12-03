@@ -3,7 +3,8 @@ jobs:
   build:
     working_directory: ~/go/src/github.com/Clever/elblog
     docker:
-    - image: cimg/go:1.24
+      - image: cimg/go:1.24
     steps:
-    - checkout
-    - run: make test
+      - checkout
+      - run: make test
+      - run: ../ci-scripts/circleci/catalog-sync $CATAPULT_URL $CATAPULT_USER $CATAPULT_PASS elblog utility
